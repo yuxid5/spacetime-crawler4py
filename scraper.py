@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup #this import is used to parsing html
+import sys
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -17,14 +18,14 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links_collection = []
-    if resp.raw_response is not None:
-        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+    if resp.raw_response is not None: #avoid None
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
         for n_url in soup.find_all('a', href=True):
             if is_valid(n_url['href']):
                 links_collection.append(n_url['href'])
     else:
         pass
-    return links_collection
+    return links_collection #return list
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
@@ -34,6 +35,14 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+
+        if '.' not in parsed.netloc: #check legal netloc
+            return False
+        
+        if (parsed.netloc not in set(["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]) 
+            and parsed.netloc.split('.', 1)[1] not in set(["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"])): #check domains
+            return False
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -47,3 +56,8 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+    except IndexError:#test bug
+        print("Error for", parsed)
+        print("netloc:", parsed.netloc)
+        print("split_result:", parsed.netloc.split(".", 1))
+        sys.exit()
