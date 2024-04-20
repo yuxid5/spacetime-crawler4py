@@ -2,10 +2,24 @@ import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup #this import is used to parsing html
 import sys
+import hashlib #import to calculate has value
+
+visited_hashes = set()
+
+def get_hashvalue(content): #use this function to calculate hash value
+    return hashlib.sha256(content).hexdigest()
+
+def is_valid_new_page(content): #to determine whether a new page
+    content_hash = get_hashvalue(content)
+    if content_hash in visited_hashes:
+        return False
+    visited_hashes.add(content_hash)
+    return True
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
+
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -18,14 +32,14 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links_collection = []
-    if resp.status == 200:
-        if resp.raw_response is not None: #avoid None
+    if resp.status == 200 and resp.raw_response is not None: #valid url
+        if(is_valid_new_page(resp.raw_response.content)):
             soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
             for n_url in soup.find_all('a', href=True):
                 if is_valid(n_url['href']):
                     links_collection.append(n_url['href'])
     else:
-        passs
+        pass
     return links_collection #return list
 
 def is_valid(url):
