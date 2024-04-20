@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup #this import is used to parsing html
+import sys
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -16,13 +17,16 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    newlinks = [] #strings
-    if resp.status == 200: #valid
-        if is_valid(url):
-            pass
-    else: #with error
-        return newlinks
-    return newlinks
+    links_collection = []
+    if resp.status == 200:
+        if resp.raw_response is not None: #avoid None
+            soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
+            for n_url in soup.find_all('a', href=True):
+                if is_valid(n_url['href']):
+                    links_collection.append(n_url['href'])
+    else:
+        passs
+    return links_collection #return list
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
@@ -32,8 +36,17 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-        if parsed.netloc not in set(["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]): #check domains
+
+        if '.' not in parsed.netloc: #check legal netloc
             return False
+        
+        if (parsed.netloc not in set(["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]) 
+            and parsed.netloc.split('.', 1)[1] not in set(["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"])): #check domains
+            return False
+        
+        if not url.isascii(): #ensure sending the server a request with an ASCII URL
+            return False
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -47,8 +60,13 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+    except IndexError:#test bug
+        print("Error for", parsed)
+        print("netloc:", parsed.netloc)
+        print("split_result:", parsed.netloc.split(".", 1))
+        sys.exit()
 
 
 if __name__ == "__main__":
-    testurl = "https://cs.ucb.edu/research-areas/"
-    print(is_valid(testurl))
+    url = "https://example.com/路径?query=测试"
+    print(is_valid(url))
