@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 import sys
 import hashlib #import to calculate has value
@@ -9,9 +9,12 @@ visited_hashes = set()
 def get_hashvalue(content): #use this function to calculate hash value
     return hashlib.sha256(content).hexdigest()
 
-def is_valid_new_page(content): #to determine whether a new page
-    content_hash = get_hashvalue(content)
+def is_valid_new_page(resp): #to determine whether a new page
+    global visited_hashes
+    content_hash = get_hashvalue(resp.raw_response.content) #check the similarity page.
     if content_hash in visited_hashes:
+        return False
+    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 5 * 1024 * 1024: #define valid page size 20KB-5MB
         return False
     visited_hashes.add(content_hash)
     return True
@@ -33,11 +36,14 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links_collection = []
     if resp.status == 200 and resp.raw_response is not None: #valid url
-        if(is_valid_new_page(resp.raw_response.content)):
+        if(is_valid_new_page(resp)):
             soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
             for n_url in soup.find_all('a', href=True):
-                if is_valid(n_url['href']):
-                    links_collection.append(n_url['href'])
+                abs_url = urljoin(url, n_url['href'])
+                if urlparse(abs_url).fragment != '':
+                    abs_url = abs_url.split("#")[0]
+                if is_valid(abs_url):
+                    links_collection.append(abs_url)
     else:
         pass
     return links_collection #return list
@@ -74,12 +80,12 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
     except IndexError:#test bug
         print("Error for", parsed)
         print("netloc:", parsed.netloc)
         print("split_result:", parsed.netloc.split(".", 1))
         sys.exit()
-
 
 if __name__ == "__main__":
     url = "https://example.com/路径?query=测试"
