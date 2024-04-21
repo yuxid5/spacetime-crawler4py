@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 import sys
 import hashlib #import to calculate has value
@@ -11,6 +11,7 @@ def get_hashvalue(content): #use this function to calculate hash value
 
 def is_valid_new_page(content): #to determine whether a new page
     content_hash = get_hashvalue(content)
+    global visited_hashes
     if content_hash in visited_hashes:
         return False
     visited_hashes.add(content_hash)
@@ -36,8 +37,11 @@ def extract_next_links(url, resp):
         if(is_valid_new_page(resp.raw_response.content)):
             soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
             for n_url in soup.find_all('a', href=True):
-                if is_valid(n_url['href']):
-                    links_collection.append(n_url['href'])
+                abs_url = urljoin(url, n_url['href'])
+                if urlparse(abs_url).fragment != '':
+                    abs_url = abs_url.split("#")[0]
+                if is_valid(abs_url):
+                    links_collection.append(abs_url)
     else:
         pass
     return links_collection #return list
