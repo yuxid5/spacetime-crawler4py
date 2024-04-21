@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup #this import is used to parsing html
 import sys
 
@@ -18,14 +18,25 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links_collection = []
-    if resp.raw_response is not None: #avoid None
-        soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
-        for n_url in soup.find_all('a', href=True):
-            if is_valid(n_url['href']):
-                links_collection.append(n_url['href'])
+    
+    if resp.status == 200 and resp.raw_response is not None:
+        # Parse the HTML content
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+        
+        # Extract and normalize the URLs
+        for anchor_tag in soup.find_all('a', href=True):
+            href = anchor_tag.get('href')
+            absolute_url = urljoin(resp.url, href)
+            
+            # Filter and validate URLs
+            if is_valid(absolute_url):
+                links_collection.append(absolute_url)
     else:
+        # Handle errors or non-200 status codes
+        #print("Error: Status code", resp.status, "for URL:", resp.url)
         pass
-    return links_collection #return list
+    
+    return links_collection
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
