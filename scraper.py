@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
+from urllib.robotparser import RobotFileParser # to handle robot file
 import sys
 import hashlib #import to calculate has value
 
@@ -9,13 +10,22 @@ visited_hashes = set()
 def get_hashvalue(content): #use this function to calculate hash value
     return hashlib.sha256(content).hexdigest()
 
-def is_valid_new_page(content): #to determine whether a new page
-    content_hash = get_hashvalue(content)
+def is_valid_new_page(resp): #to determine whether a new page
     global visited_hashes
+    soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+    content_hash = get_hashvalue(soup.get_text(separator=' ', strip=True).encode("utf-8")) #check the similarity page.
     if content_hash in visited_hashes:
+        return False
+    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 5 * 1024 * 1024: #define valid page size 20KB-5MB
+        return False
+    if not checkrobots(resp.url):
         return False
     visited_hashes.add(content_hash)
     return True
+
+def is_relative_url(url):
+    parsed_url = urlparse(url)
+    return not parsed_url.scheme and not parsed_url.netloc
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -34,13 +44,20 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links_collection = []
     if resp.status == 200 and resp.raw_response is not None: #valid url
-        if(is_valid_new_page(resp.raw_response.content)):
+        if(is_valid_new_page(resp)):
             soup = BeautifulSoup(resp.raw_response.content, 'html.parser') #parse html
             for n_url in soup.find_all('a', href=True):
-                abs_url = urljoin(url, n_url['href'])
+
+                if is_relative_url(n_url['href']):
+                    abs_url = urljoin(url, n_url['href'])
+                else:
+                    abs_url = n_url['href']
+
                 if urlparse(abs_url).fragment != '':
                     abs_url = abs_url.split("#")[0]
+
                 if is_valid(abs_url):
+                    #print(soup.get_text(separator=' ', strip=True)) #for test
                     links_collection.append(abs_url)
     else:
         pass
@@ -64,6 +81,9 @@ def is_valid(url):
         
         if not url.isascii(): #ensure sending the server a request with an ASCII URL
             return False
+        
+        if check_repeating_segment(parsed):
+            return False
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -85,6 +105,25 @@ def is_valid(url):
         print("split_result:", parsed.netloc.split(".", 1))
         sys.exit()
 
+def checkrobots(url):
+    parsed = urlparse(url)
+    baseurl = f"{parsed.scheme}://{parsed.netloc}"
+    rp = RobotFileParser()
+    rp.set_url(urljoin(baseurl, '/robots.txt'))
+    try:
+        rp.read()
+    except Exception:
+        return True
+    return rp.can_fetch('*', url)
+
+def check_repeating_segment(parsed):
+    path = parsed.path
+    segment = path.strip("/").split("/")
+    segment_set = set(segment)
+    if any(segment.count(segment) > 2 for segment in segment_set):
+        return True
+    return False
+    
 if __name__ == "__main__":
     url = "https://example.com/路径?query=测试"
     print(is_valid(url))
