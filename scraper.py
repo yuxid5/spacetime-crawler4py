@@ -118,9 +118,9 @@ def checkrobots(url):
 
 def check_repeating_segment(parsed):
     path = parsed.path
-    segment = path.strip("/").split("/")
-    segment_set = set(segment)
-    if any(segment.count(segment) > 2 for segment in segment_set):
+    segments = path.strip("/").split("/")
+    segment_set = set(segments)
+    if any(segments.count(segment) > 2 for segment in segment_set):
         return True
     return False
     
