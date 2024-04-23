@@ -3,20 +3,73 @@ from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 from urllib.robotparser import RobotFileParser # to handle robot file
 import sys
-import hashlib #import to calculate has value
 
 visited_hashes = set()
 
 def get_hashvalue(content): #use this function to calculate hash value
-    return hashlib.sha256(content).hexdigest()
+    lisOfAllToken = tokenize(content) #tokenize content
+    tokenFrequency = computeWordFrequencies(lisOfAllToken)#compute frequency
+    vector = [0] * 64 #initialize vector
+    for word, weight in tokenFrequency.items():
+        word_hash = hash(word) #compute word hash value
+        for i in range(64): #updtate vector
+            bitmask = 1 << i
+            if word_hash & bitmask:
+                vector[i] += weight  # if 1 add weight
+            else:
+                vector[i] -= weight  # if 0，subtract weight
+    fingerprint = 0 #generating fingerprint
+    for i in range(64):
+        if vector[i] > 0:
+            fingerprint |= 1 << i
+    return fingerprint
+
+def hamming_distance(hash1, hash2):
+    x = hash1 ^ hash2
+    total = 0
+    while x:
+        total += 1
+        x &= x - 1
+    return total
+
+def similarity_score(hash1, hash2, hash_bits=64):
+    distance = hamming_distance(hash1, hash2)
+    similarity = (hash_bits - distance) / hash_bits
+    return similarity
+
+def tokenize(text):
+    tokens = []
+    temp_word = ""
+    for char in text:
+        if '0' <= str(char).lower() <= '9' or 'a' <= str(char).lower() <= 'z':
+            temp_word += str(char).lower()
+        else:
+            if temp_word:
+                tokens.append(temp_word)
+                temp_word = ""
+    if temp_word:  # Add the last word if there is one
+        tokens.append(temp_word)
+    return tokens
+
+
+def computeWordFrequencies(listToken):
+    wordDict = {}
+    for item in listToken:
+        if item not in wordDict:
+            wordDict[item] = 1
+        else:
+            wordDict[item] +=1
+    return wordDict
+
 
 def is_valid_new_page(resp): #to determine whether a new page
     global visited_hashes
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
     content_hash = get_hashvalue(soup.get_text(separator=' ', strip=True).encode("utf-8")) #check the similarity page.
-    if content_hash in visited_hashes:
-        return False
-    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 5 * 1024 * 1024: #define valid page size 20KB-5MB
+    for value in visited_hashes:
+        if similarity_score(value, content_hash) > 0.8:
+            return False
+    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 1 * 1024 * 1024: #define valid page size 20KB-5MB
         return False
     if not checkrobots(resp.url):
         return False
