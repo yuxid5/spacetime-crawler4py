@@ -69,19 +69,6 @@ def simple_hash_to_binary(value): #compute binary value of word hash value
     binary_representation = bin(lower_64_bits)[2:].zfill(64) #convert to bin
     return binary_representation
 
-    # hash_object = hashlib.sha256(value.encode())
-    # hex_dig = hash_object.hexdigest()
-    
-    # # 2. 将十六进制哈希转换为整数
-    # hash_int = int(hex_dig, 16)
-    
-    # # 3. 获取整数的最低8位（而不是64位）
-    # lower_8_bits = hash_int & ((1 << 8) - 1)  # 2^8 - 1 = 255，即0xFF
-    
-    # # 4. 将这8位整数转换为二进制字符串，并确保输出为8位
-    # binary_representation = bin(lower_8_bits)[2:].zfill(8)  # 使用zfill确保二进制字符串长度为8
-    
-    # return binary_representation
 
 
 if __name__ == "__main__":
