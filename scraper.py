@@ -3,6 +3,7 @@ from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 from urllib.robotparser import RobotFileParser # to handle robot file
 import hashlib
+import sys
 
 visited_hashes = []
 unique_count = 0
