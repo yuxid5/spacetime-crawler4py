@@ -23,8 +23,6 @@ def get_fingerprint(content): #use this function to calculate hash value
     return vector
 
 def get_score(fingerprint1, fingerprint2):
-    print(fingerprint1)
-    print(fingerprint2)
     score = 0
     finalfingerprint = [0]*64
     for i in range(64): #bitwise two fingerprint
@@ -77,8 +75,8 @@ if __name__ == "__main__":
 
     # simhash1 = get_hashvalue(text1)
     # simhash2 = get_hashvalue(text2)
-    url1 = "https://ics.uci.edu/community/news/view_news.php?id=1957"
-    url2 = "https://ics.uci.edu/community/news/view_news.php?id=1958"
+    url1 = "https://grape.ics.uci.edu/wiki/public/wiki/cs222p-2017-fall?version=81"
+    url2 = "https://grape.ics.uci.edu/wiki/public/wiki/cs222p-2017-fall?version=82"
     html_content1 = requests.get(url1).text
     html_content2 = requests.get(url2).text
     soup1 = BeautifulSoup(html_content1, 'html.parser')
