@@ -1,0 +1,68 @@
+There are 340 unique urls
+---------------------------------------------------------------------------------
+The longeset page is:https://www.stat.uci.edu/oc_covid_model Contains: 1908 words
+---------------------------------------------------------------------------------
+We find following subdomain under ics.uci.edu
+    www.ics.uci.edu:372
+    www.informatics.uci.edu:9
+    statconsulting.ics.uci.edu:5
+    dgillen.ics.uci.edu:1
+    archive.ics.uci.edu:1
+    mds.ics.uci.edu:5
+    swiki.ics.uci.edu:10
+    intranet.ics.uci.edu:6
+    tippersweb.ics.uci.edu:4
+    coronavirustwittermap.ics.uci.edu:2
+---------------------------------------------------------------------------------
+Most frequently words are
+1. data (33)
+2. research (31)
+3. statistics (31)
+4. uci (25)
+5. code (24)
+6. ignored (24)
+7. bren (20)
+8. results (20)
+9. school (20)
+10. policies (18)
+11. computer (17)
+12. ds (17)
+13. store (17)
+14. analysis (16)
+15. donald (15)
+16. faculty (15)
+17. science (15)
+18. ics (14)
+19. time (14)
+20. can (13)
+21. information (13)
+22. resources (13)
+23. individuals (12)
+24. irvine (12)
+25. learning (12)
+26. news (12)
+27. number (12)
+28. students (12)
+29. events (11)
+30. sciences (11)
+31. text (11)
+32. us (11)
+33. academic (10)
+34. contact (10)
+35. covid (10)
+36. may (10)
+37. new (10)
+38. version (10)
+39. course (9)
+40. department (9)
+41. development (9)
+42. machine (9)
+43. markdown (9)
+44. model (9)
+45. policy (9)
+46. professor (9)
+47. report (9)
+48. student (9)
+49. also (8)
+50. causal (8)
+-------------------------------------end-------------------------------------------

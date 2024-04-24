@@ -5,6 +5,14 @@ from urllib.robotparser import RobotFileParser # to handle robot file
 import sys
 
 visited_hashes = set()
+unique_count = 0
+the_longest_page = ''
+the_longest_page_num = 0
+unique_subdomin = dict()
+with open('stopwords.txt', 'r') as sword:
+    stop_words = [line.strip() for line in sword]
+total_word_dict = dict()
+total_token = []
 
 def get_hashvalue(content): #use this function to calculate hash value
     lisOfAllToken = tokenize(content) #tokenize content
@@ -61,24 +69,40 @@ def computeWordFrequencies(listToken):
             wordDict[item] +=1
     return wordDict
 
+def computeWordFrequencies_with_no_stop_words(listToken):
+    wordDict = {}
+    for item in listToken:
+        if item not in stop_words and not item.isdigit():
+            if item not in wordDict:
+                wordDict[item] = 1
+            else:
+                wordDict[item] +=1
+    return wordDict
+
 
 def is_valid_new_page(resp): #to determine whether a new page
     global visited_hashes
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
-    content_hash = get_hashvalue(soup.get_text(separator=' ', strip=True).encode("utf-8")) #check the similarity page.
-    for value in visited_hashes:
-        if similarity_score(value, content_hash) > 0.8:
-            return False
-    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 1 * 1024 * 1024: #define valid page size 20KB-5MB
+    tokens = tokenize(soup.get_text(separator=' ', strip=True)) #get the page content
+    token_str = "".join(tokens)
+    if len(token_str) > 10 * 1024 * 1024 or len(token_str) <= 500:  #define valid page size
         return False
     if not checkrobots(resp.url):
         return False
-    visited_hashes.add(content_hash)
+    
+    visited_hashes.add(0)
+    global the_longest_page_num
+    global the_longest_page
+    if len(tokens) > the_longest_page_num:
+        the_longest_page = resp.url
+        the_longest_page_num = len(tokens)
+    global total_token
+    total_token.extend(tokens)
     return True
 
 def is_relative_url(url):
     parsed_url = urlparse(url)
-    return not parsed_url.scheme and not parsed_url.netloc
+    return not parsed_url.scheme or not parsed_url.netloc
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -102,18 +126,20 @@ def extract_next_links(url, resp):
             for n_url in soup.find_all('a', href=True):
 
                 if is_relative_url(n_url['href']):
-                    abs_url = urljoin(url, n_url['href'])
+                    abs_url = urljoin(resp.url, n_url['href'])
                 else:
                     abs_url = n_url['href']
 
                 if urlparse(abs_url).fragment != '':
                     abs_url = abs_url.split("#")[0]
-
+                global unique_count
+                unique_count += 1
                 if is_valid(abs_url):
                     #print(soup.get_text(separator=' ', strip=True)) #for test
                     links_collection.append(abs_url)
+                    write_report()
     else:
-        pass
+        return[]
     return links_collection #return list
 
 def is_valid(url):
@@ -137,7 +163,12 @@ def is_valid(url):
         
         if check_repeating_segment(parsed):
             return False
-
+        if parsed.netloc.endswith("ics.uci.edu") and parsed.netloc != "ics.uci.edu":
+            if parsed.netloc in unique_subdomin:
+                unique_subdomin[parsed.netloc] += 1
+            else:
+                unique_subdomin[parsed.netloc] = 1
+            
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -146,7 +177,7 @@ def is_valid(url):
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|ppsx)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
@@ -177,6 +208,27 @@ def check_repeating_segment(parsed):
         return True
     return False
     
+def write_report():
+    with open('report.txt', 'w') as file:
+        file.write(f"There are {unique_count} unique urls\n")
+        file.write("---------------------------------------------------------------------------------\n")
+        file.write(f"The longeset page is:{the_longest_page} Contains: {the_longest_page_num} words\n")
+        file.write("---------------------------------------------------------------------------------\n")
+        file.write(f"We find following subdomain under ics.uci.edu\n")
+        for subdomain, frequency in unique_subdomin.items():
+            file.write(f"    {subdomain}:{frequency}\n")
+        file.write("---------------------------------------------------------------------------------\n")
+        file.write(f"Most frequently words are\n")
+        global total_word_dict
+        total_word_dict = computeWordFrequencies_with_no_stop_words(total_token)
+        sorted_result = dict(sorted(total_word_dict.items(), key=lambda item: (-item[1], item[0])))
+        i = 1
+        for i, (word, freq) in enumerate(sorted_result.items(), 1):
+            file.write(f'{i}. {word} ({freq})\n')
+            if i >= 50:
+                break
+        file.write("-------------------------------------end-------------------------------------------\n")
 if __name__ == "__main__":
     url = "https://example.com/路径?query=测试"
     print(is_valid(url))
+    print(stop_words)

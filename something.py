@@ -1,3 +1,5 @@
+import requests
+from bs4 import BeautifulSoup
 def get_hashvalue(content): #use this function to calculate hash value
     lisOfAllToken = tokenize(content) #tokenize content
     tokenFrequency = computeWordFrequencies(lisOfAllToken)#compute frequency
@@ -54,10 +56,23 @@ def computeWordFrequencies(listToken):
     return wordDict
 
 if __name__ == "__main__":
-    text1 = "This is an example of text for simhash computation."
-    text2 = "This is a sample of text for simhash computation."
+    # text1 = "This is an example of text for simhash computation."
+    # text2 = "y"
 
-    simhash1 = get_hashvalue(text1)
-    simhash2 = get_hashvalue(text2)
-    reuslt = similarity_score(simhash1,simhash2)
-    print(reuslt)
+    # simhash1 = get_hashvalue(text1)
+    # simhash2 = get_hashvalue(text2)
+    # reuslt = similarity_score(simhash1,simhash2)
+    # print(reuslt)
+    # url1 = "https://wics.ics.uci.edu/wics-hosts-a-toy-hacking-workshop-with-dr-garnet-hertz/13-02-03-toy-hacker-008"
+    # html_content1 = requests.get(url1).text
+    # soup1 = BeautifulSoup(html_content1, 'html.parser')
+    # content_hash1 = get_hashvalue(soup1.get_text(separator=' ', strip=True))
+
+    url2 = "https://ics.uci.edu/~yuxid5"
+    html_content2 = requests.get(url2).text
+    soup2 = BeautifulSoup(html_content2, 'html.parser')
+    content_hash2 = get_hashvalue(soup2.get_text(separator=' ', strip=True))
+    test1 = get_hashvalue("Hello this is a message from att, and bdw is shit")
+    test2 = get_hashvalue("y")
+    print("similarity: ", similarity_score(test1, test2))
+    print(soup2.get_text(separator=' ', strip=True))
