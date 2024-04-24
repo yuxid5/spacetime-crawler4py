@@ -156,7 +156,7 @@ def extract_next_links(url, resp):
                 if is_valid(abs_url):
                     #print(soup.get_text(separator=' ', strip=True)) #for test
                     links_collection.append(abs_url)
-                    write_report()
+                    #write_report() for test
     else:
         return[]
     return links_collection #return list
