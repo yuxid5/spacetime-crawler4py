@@ -2,9 +2,9 @@ import re
 from urllib.parse import urlparse, urljoin #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 from urllib.robotparser import RobotFileParser # to handle robot file
-import sys
+import hashlib
 
-visited_hashes = set()
+visited_hashes = []
 unique_count = 0
 the_longest_page = ''
 the_longest_page_num = 0
@@ -14,43 +14,41 @@ with open('stopwords.txt', 'r') as sword:
 total_word_dict = dict()
 total_token = []
 
-def get_hashvalue(content): #use this function to calculate hash value
-    lisOfAllToken = tokenize(content) #tokenize content
+def get_fingerprint(lisOfAllToken): #use this function to calculate hash value
     tokenFrequency = computeWordFrequencies(lisOfAllToken)#compute frequency
-    vector = [0] * 64 #initialize vector
-    for word, weight in tokenFrequency.items():
-        word_hash = hash(word) #compute word hash value
-        for i in range(64): #updtate vector
-            bitmask = 1 << i
-            if word_hash & bitmask:
-                vector[i] += weight  # if 1 add weight
-            else:
-                vector[i] -= weight  # if 0，subtract weight
-    fingerprint = 0 #generating fingerprint
+    vector = [0] * 64 #initialize vector(fingerprint)
+    for key, (weight, binary_string) in tokenFrequency.items():
+        for i, bit in enumerate(binary_string):
+            # if 0 mult -1, 1 otherwise
+            multiplier = 1 if bit == '1' else -1
+            # weight binary
+            vector[i] += weight * multiplier
+    #generating fingerprint
     for i in range(64):
         if vector[i] > 0:
-            fingerprint |= 1 << i
-    return fingerprint
+            vector[i] = 1
+        else:
+            vector[i] = 0
+    return vector
 
-def hamming_distance(hash1, hash2):
-    x = hash1 ^ hash2
-    total = 0
-    while x:
-        total += 1
-        x &= x - 1
-    return total
-
-def similarity_score(hash1, hash2, hash_bits=64):
-    distance = hamming_distance(hash1, hash2)
-    similarity = (hash_bits - distance) / hash_bits
-    return similarity
+def get_score(fingerprint1, fingerprint2):
+    score = 0
+    finalfingerprint = [0]*64
+    for i in range(64): #bitwise two fingerprint
+        if fingerprint1[i] == fingerprint2[i]:
+            finalfingerprint[i] = 1
+        else:
+            finalfingerprint[i] = 0
+    for value in finalfingerprint:
+        score += value
+    return score/64
 
 def tokenize(text):
     tokens = []
     temp_word = ""
     for char in text:
-        if '0' <= str(char).lower() <= '9' or 'a' <= str(char).lower() <= 'z':
-            temp_word += str(char).lower()
+        if '0' <= char.lower() <= '9' or 'a' <= char.lower() <= 'z':
+            temp_word += char.lower()
         else:
             if temp_word:
                 tokens.append(temp_word)
@@ -63,10 +61,11 @@ def tokenize(text):
 def computeWordFrequencies(listToken):
     wordDict = {}
     for item in listToken:
+        word_hashvalue = simple_hash_to_binary(item)
         if item not in wordDict:
-            wordDict[item] = 1
+            wordDict[item] = [1,word_hashvalue]
         else:
-            wordDict[item] +=1
+            wordDict[item][0] +=1
     return wordDict
 
 def computeWordFrequencies_with_no_stop_words(listToken):
@@ -79,18 +78,37 @@ def computeWordFrequencies_with_no_stop_words(listToken):
                 wordDict[item] +=1
     return wordDict
 
+def simple_hash_to_binary(value): #compute binary value of word hash value
+    hash_object = hashlib.sha256(value.encode())
+    hex_dig = hash_object.hexdigest()
+    hash_int = int(hex_dig, 16) #conver hex to int
+    lower_64_bits = hash_int & ((1 << 64) - 1) #get low 64 bits
+    binary_representation = bin(lower_64_bits)[2:].zfill(64) #convert to bin
+    return binary_representation
+
+def check_all_sim(fingerprint2): #check for log
+    global visited_hashes
+    for value in visited_hashes:
+        if get_score(value, fingerprint2) > 0.9:
+            return False
+    return True
+
 
 def is_valid_new_page(resp): #to determine whether a new page
     global visited_hashes
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
-    tokens = tokenize(soup.get_text(separator=' ', strip=True)) #get the page content
+    tokens = tokenize(soup.get_text(separator=' ', strip=True)) #check the similarity page.
+    fingerprint2 = get_fingerprint(tokens)
+    if not check_all_sim(fingerprint2):
+        return False
+
     token_str = "".join(tokens)
     if len(token_str) > 10 * 1024 * 1024 or len(token_str) <= 500:  #define valid page size
         return False
     if not checkrobots(resp.url):
         return False
     
-    visited_hashes.add(0)
+    visited_hashes.append(fingerprint2)
     global the_longest_page_num
     global the_longest_page
     if len(tokens) > the_longest_page_num:
