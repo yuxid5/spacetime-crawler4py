@@ -65,11 +65,13 @@ def computeWordFrequencies(listToken):
 def is_valid_new_page(resp): #to determine whether a new page
     global visited_hashes
     soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
-    content_hash = get_hashvalue(soup.get_text(separator=' ', strip=True).encode("utf-8")) #check the similarity page.
-    for value in visited_hashes:
-        if similarity_score(value, content_hash) > 0.8:
-            return False
-    if 20 * 1024 >= len(resp.raw_response.content) or len(resp.raw_response.content) >= 1 * 1024 * 1024: #define valid page size 20KB-5MB
+    tokens = tokenize(soup.get_text(separator=' ', strip=True)) #check the similarity page.
+    if len(tokens) < 50 or len(tokens) > 10000000:
+        return False
+    #for value in visited_hashes:
+        #if similarity_score(value, content_hash) > 0.8:
+            #return False
+    if 20 * 1024 > len(resp.raw_response.content) or len(resp.raw_response.content) > 1 * 1024 * 1024: #define valid page size 20KB-5MB
         return False
     if not checkrobots(resp.url):
         return False
