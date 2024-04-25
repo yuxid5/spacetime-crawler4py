@@ -75,8 +75,8 @@ if __name__ == "__main__":
 
     # simhash1 = get_hashvalue(text1)
     # simhash2 = get_hashvalue(text2)
-    url1 = "https://grape.ics.uci.edu/wiki/public/wiki/cs222p-2017-fall?version=81"
-    url2 = "https://grape.ics.uci.edu/wiki/public/wiki/cs222p-2017-fall?version=82"
+    url1 = "http://archive.ics.uci.edu/datasets/E.+Coli+Genes"
+    url2 = "https://ics.uci.edu/~thornton/ics33/Notes/"
     html_content1 = requests.get(url1).text
     html_content2 = requests.get(url2).text
     soup1 = BeautifulSoup(html_content1, 'html.parser')

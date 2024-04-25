@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse, urljoin #use to find abs url
+from urllib.parse import urlparse, urljoin, urldefrag #use to find abs url
 from bs4 import BeautifulSoup #this import is used to parsing html
 from urllib.robotparser import RobotFileParser # to handle robot file
 import hashlib
@@ -90,7 +90,9 @@ def simple_hash_to_binary(value): #compute binary value of word hash value
 def check_all_sim(fingerprint2): #check for log
     global visited_hashes
     for value in visited_hashes:
-        if get_score(value, fingerprint2) > 0.9:
+        score = get_score(value, fingerprint2)
+        if  score > 0.9:
+            #print(score)
             return False
     return True
 
@@ -108,7 +110,6 @@ def is_valid_new_page(resp): #to determine whether a new page
         return False
     if not checkrobots(resp.url):
         return False
-    
     visited_hashes.append(fingerprint2)
     global the_longest_page_num
     global the_longest_page
@@ -158,7 +159,7 @@ def extract_next_links(url, resp):
                     links_collection.append(abs_url)
                     #write_report() for test
     else:
-        return[]
+        return []
     return links_collection #return list
 
 def is_valid(url):
@@ -180,9 +181,11 @@ def is_valid(url):
         if not url.isascii(): #ensure sending the server a request with an ASCII URL
             return False
         
-        if check_repeating_segment(parsed):
+        #if check_repeating_segment(parsed):
+            #return False
+        if "datasets.php" in url: #black list
             return False
-        if parsed.netloc.endswith("ics.uci.edu") and parsed.netloc != "ics.uci.edu":
+        if parsed.netloc.endswith(".ics.uci.edu") and parsed.netloc != "ics.uci.edu":
             if parsed.netloc in unique_subdomin:
                 unique_subdomin[parsed.netloc] += 1
             else:
@@ -206,7 +209,7 @@ def is_valid(url):
         print("Error for", parsed)
         print("netloc:", parsed.netloc)
         print("split_result:", parsed.netloc.split(".", 1))
-        sys.exit()
+        raise IndexError
 
 def checkrobots(url):
     parsed = urlparse(url)
@@ -216,7 +219,7 @@ def checkrobots(url):
     try:
         rp.read()
     except Exception:
-        return True
+        return False
     return rp.can_fetch('*', url)
 
 def check_repeating_segment(parsed):
@@ -226,7 +229,7 @@ def check_repeating_segment(parsed):
     if any(segments.count(segment) > 2 for segment in segment_set):
         return True
     return False
-    
+
 def write_report():
     """This function is to write a report for the crawler, which includes"""
     with open('report.txt', 'w') as file:
@@ -249,6 +252,8 @@ def write_report():
             if i >= 50:
                 break
         file.write("-------------------------------------end-------------------------------------------\n")
+
+
 if __name__ == "__main__":
     url = "https://example.com/路径?query=测试"
     print(is_valid(url))
